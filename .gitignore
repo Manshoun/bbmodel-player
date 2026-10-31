@@ -1,0 +1,8 @@
+node_modules/
+docs/_tmp/
+*.log
+.DS_Store
+Thumbs.db
+.env*
+dist/
+docs/lib/*.map

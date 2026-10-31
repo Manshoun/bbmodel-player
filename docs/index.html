@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bbmodel-player | Blockbench models in the browser</title>
+  <meta name="description" content="Play Blockbench .bbmodel files and their animations on any website. One script tag, one HTML element.">
+  <style>
+    :root {
+      --bg: #111316; --panel: #191c20; --line: #2a2f36; --text: #e8eaed; --muted: #9aa3ad;
+      --accent: #7fd36b; --accent-ink: #0e1a0b; --code: #0c0e10;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    a { color: var(--accent); }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+    header { padding: 36px 0 20px; display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    h1 { margin: 0; font: 700 30px/1.1 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: -.5px; }
+    h1 span { color: var(--accent); }
+    .tagline { margin: 6px 0 0; color: var(--muted); }
+    .gh { color: var(--text); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+    .gh:hover { border-color: var(--accent); }
+
+    .main { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+    .viewer { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .viewer bbmodel-player { width: 100%; height: 520px; }
+    .viewer.drag { outline: 2px dashed var(--accent); outline-offset: -8px; }
+    .empty { position: absolute; inset: 0; background: var(--panel); display: grid; place-content: center; grid-template-columns: min(440px, 100%); gap: 14px; text-align: center; padding: 20px; }
+    .empty[hidden] { display: none; }
+    .empty p { margin: 0; color: var(--muted); }
+    .empty strong { display: block; color: var(--text); font-size: 18px; margin-bottom: 4px; }
+    .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .btn, .row input { font: inherit; font-size: 14px; color: var(--text); background: transparent; border: 1px solid var(--line);
+                       border-radius: 8px; padding: 8px 12px; }
+    .btn { cursor: pointer; }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+    .row input { flex: 1; min-width: 0; }
+    .row input:focus { outline: none; border-color: var(--muted); }
+    .top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 8px;
+           color: var(--muted); font-size: 13px; pointer-events: none; }
+    .top[hidden] { display: none; }
+    .top label { pointer-events: auto; cursor: pointer; color: var(--text); border-bottom: 1px dashed var(--muted); }
+    .err { color: #ff8a80; font-size: 13px; min-height: 1em; }
+
+    .side { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .side h2 { margin: 0 0 4px; font-size: 16px; overflow-wrap: anywhere; }
+    .side .meta { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+    .anims { display: flex; flex-wrap: wrap; gap: 6px; }
+    .anims button, .chip { font: inherit; font-size: 13px; color: var(--text); background: transparent; border: 1px solid var(--line);
+                           border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+    .anims button:hover, .chip:hover { border-color: var(--accent); }
+    .anims button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 14px; }
+
+    section { margin-top: 44px; }
+    section > h2 { font-size: 18px; margin: 0 0 14px; }
+    pre { margin: 0; background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow: auto;
+          font: 13px/1.6 ui-monospace, "SF Mono", Consolas, monospace; color: #cfd6dd; }
+    .code { position: relative; margin-bottom: 14px; }
+    .code button { position: absolute; top: 8px; right: 8px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+    td:first-child { font-family: ui-monospace, Consolas, monospace; color: var(--accent); white-space: nowrap; }
+    footer { margin: 56px 0 32px; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 860px) {
+      .main, .cols { grid-template-columns: 1fr; }
+      .viewer bbmodel-player { height: 420px; }
+    }
+  </style>
+  <script type="module" src="lib/bbmodel-player.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>bbmodel<span>-</span>player</h1>
+        <p class="tagline">Play Blockbench models and their animations on any website. One script tag, one HTML element.</p>
+      </div>
+      <a class="gh" href="https://github.com/Manshoun/bbmodel-player">Source on GitHub</a>
+    </header>
+
+    <div class="main">
+      <div class="viewer" id="viewer">
+        <bbmodel-player id="main" controls></bbmodel-player>
+        <div class="empty" id="empty">
+          <p><strong>Drop a .bbmodel file here</strong>It stays in your browser, nothing gets uploaded.</p>
+          <div class="row">
+            <label class="btn primary">Open file<input id="file" type="file" accept=".bbmodel,.json" hidden></label>
+          </div>
+          <form class="row" id="url-form">
+            <input id="url" type="url" placeholder="or paste a link to a .bbmodel" aria-label="Model URL">
+            <button class="btn" type="submit">Load</button>
+          </form>
+          <p class="err" id="err"></p>
+        </div>
+        <div class="top" id="top" hidden><span>Drop another .bbmodel to swap it</span>
+          <label>open file<input id="file2" type="file" accept=".bbmodel,.json" hidden></label></div>
+      </div>
+      <aside class="side">
+        <h2 id="title">No model loaded</h2>
+        <p class="meta" id="meta">Any project saved with Blockbench works: generic, Bedrock, Java entity or GeckoLib.</p>
+        <div class="anims" id="anims"></div>
+        <p class="hint">Looping animations replace the base loop. One-shots like wave or attack play on top of it and then
+          hand back to the loop. Drag to orbit, click and scroll to zoom.</p>
+      </aside>
+    </div>
+
+    <section>
+      <h2>Use it</h2>
+      <div class="code"><pre id="snippet-html">&lt;script type="module" src="https://cdn.jsdelivr.net/npm/bbmodel-player/dist/bbmodel-player.js"&gt;&lt;/script&gt;
+
+&lt;bbmodel-player src="knight.bbmodel" animation="idle" controls&gt;&lt;/bbmodel-player&gt;</pre><button class="chip" data-copy="snippet-html">copy</button></div>
+      <div class="cols">
+        <div class="code"><pre id="snippet-js">import { BBModelPlayer } from 'bbmodel-player';
+
+const player = new BBModelPlayer(document.querySelector('#stage'));
+await player.load('knight.bbmodel');
+player.play('walk');        // looping base animation
+player.playOnce('attack');  // one-shot on top, then back to walk</pre><button class="chip" data-copy="snippet-js">copy</button></div>
+        <table>
+          <tr><td>src</td><td>URL of the .bbmodel file</td></tr>
+          <tr><td>animation</td><td>looping base animation (default <code>idle</code>)</td></tr>
+          <tr><td>controls</td><td>show animation picker, pause, speed, reset view</td></tr>
+          <tr><td>auto-rotate</td><td>slowly turn the model</td></tr>
+          <tr><td>view</td><td>front, back, left, right or top</td></tr>
+          <tr><td>background</td><td>any CSS color, default transparent</td></tr>
+          <tr><td>zoom</td><td><code>click</code> (default, wheel zooms after a click so the page still scrolls), <code>always</code> or <code>none</code></td></tr>
+          <tr><td>static</td><td>no mouse input at all, good for galleries</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <footer>MIT licensed. Renders with three.js. Not affiliated with Blockbench or Mojang.</footer>
+  </div>
+
+  <script type="module">
+    const main = document.getElementById('main');
+    const viewer = document.getElementById('viewer');
+    const anims = document.getElementById('anims');
+    const empty = document.getElementById('empty');
+    const err = document.getElementById('err');
+
+    function renderAnims(names) {
+      const model = main.player.model;
+      document.getElementById('title').textContent = model.name;
+      const cubes = model.bones.reduce((n, b) => n + b.cubes.length, model.rootCubes.length);
+      document.getElementById('meta').textContent = `${model.bones.length} bones, ${cubes} cubes, ${names.length} animations`;
+      anims.replaceChildren(...names.map((name) => {
+        const a = model.animations.find((x) => x.name === name);
+        const b = document.createElement('button');
+        b.textContent = name;
+        b.title = `${a.loop}, ${a.length.toFixed(2)} s`;
+        b.setAttribute('aria-pressed', String(main.player.mixer?.base?.anim.name === name));
+        b.addEventListener('click', () => main.play(name));
+        return b;
+      }));
+    }
+    main.addEventListener('load', (e) => {
+      empty.hidden = true;
+      document.getElementById('top').hidden = false;
+      renderAnims(e.detail.animations);
+    });
+    // with a model on screen the player shows the error itself
+    main.addEventListener('error', (e) => {
+      if (!main.player.model) err.textContent = e.detail.message;
+    });
+    main.addEventListener('animationstart', (e) => {
+      if (e.detail.loop !== 'loop') return;
+      anims.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.textContent === e.detail.name)));
+    });
+
+    const open = (source) => {
+      if (!source) return;
+      err.textContent = '';
+      main.load(source).catch(() => {});
+    };
+    viewer.addEventListener('dragover', (e) => { e.preventDefault(); viewer.classList.add('drag'); });
+    viewer.addEventListener('dragleave', () => viewer.classList.remove('drag'));
+    viewer.addEventListener('drop', (e) => { e.preventDefault(); viewer.classList.remove('drag'); open(e.dataTransfer.files[0]); });
+    for (const id of ['file', 'file2']) document.getElementById(id).addEventListener('change', (e) => open(e.target.files[0]));
+    document.getElementById('url-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      open(document.getElementById('url').value.trim());
+    });
+
+    // demo links: ?src=https://example.com/model.bbmodel
+    const src = new URLSearchParams(location.search).get('src');
+    if (src) open(src);
+
+    document.querySelectorAll('[data-copy]').forEach((btn) => btn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(document.getElementById(btn.dataset.copy).textContent);
+      btn.textContent = 'copied';
+      setTimeout(() => (btn.textContent = 'copy'), 1200);
+    }));
+  </script>
+</body>
+</html>
